@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import * as satellite from "satellite.js";
 
@@ -11,73 +11,177 @@ if (typeof window !== "undefined") {
     window.CESIUM_BASE_URL = process.env.CESIUM_BASE_URL || "/cesium";
 }
 
+const fetchOrCache = async function() {
+
+
+  const url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle";
+  
+  
+  //const starlinkUrl = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle";
+
+  if (localStorage.getItem('__CACHED_POSITIONS__' + url)) {
+    let result = localStorage.getItem('__CACHED_POSITIONS__' + url);
+    return result;
+  }
+
+  const response = await fetch(url)
+  if (response.status == 200) {
+    const text = await response.text();
+    localStorage.setItem('__CACHED_POSITIONS__' + url, text);
+    return text;
+  }
+
+  throw new Error('Failed to fetch satelite positions by group');
+}
+
+const getSatelites = async function() {
+
+
+  const text = await fetchOrCache();
+  const lines = text.split('\r\n');
+  let result = [];
+  //let maxSat = 1;
+  for(let i = 0 ; i+2 < lines.length; i+= 3) {
+    let name = lines[i];
+    let tle1 = lines[i+1];
+    let tle2 = lines[i+2];
+    result.push({
+      name: name,
+      tle1: tle1,
+      tle2: tle2
+    });
+  }
+
+  result.push({
+    name: "CTC-0",
+    tle1: "1 98728U          24358.00000000  .00000000  00000-0  43254-2 0    09",
+    tle2: "2 98728  45.0018 353.7498 0003705   4.7833 137.4401 15.19235095    03"
+  });
+
+  console.log('how many sats', result.length);
+
+  return result;  
+}
+
 const SatelliteCesium = () => {
   const viewerRef = useRef(null);
-
-  const tleLine1 =
-    "1 98728U          24358.00000000  .00000000  00000-0  43254-2 0    09";
-  const tleLine2 =
-    "2 98728  45.0018 353.7498 0003705   4.7833 137.4401 15.19235095    03";
+  const entitiesRef = useRef({}); // Track entities by satellite name
+  let currentInterval = null;
 
   useEffect(() => {
     const initCesium = async () => {
-      // Cesium Viewer Initialization
+      const sats = await getSatelites();
+
+      // Initialize Cesium Viewer
       const viewer = new Cesium.Viewer("cesiumContainer", {
         terrainProvider: await Cesium.createWorldTerrainAsync(),
       });
       viewerRef.current = viewer;
 
-      // Add a point for the satellite
-      const satelliteEntity = viewer.entities.add({
-        name: "Satellite",
-        position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
-        // point: {
-        //   pixelSize: 10,
-        //   color: Cesium.Color.GREEN,
-        // },
-        billboard: {
-            image: "roadmap-2024-qeffNjuE.png", // Replace with the actual path to your PNG
-            width: 32, // Set the width of the PNG
-            height: 32, // Set the height of the PNG
-          },
+      // Initialize Satellite Entities
+      sats.forEach((satellite) => {
+        if (!entitiesRef.current[satellite.name]) {
+          // Add entity to the viewer
+          const entity = viewer.entities.add({
+            id: satellite.name,
+            name: satellite.name,
+            position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
+            // point: {
+            //   pixelSize: 5,
+            //   color: Cesium.Color.GREEN,
+            // },
+            billboard: {
+              image: satellite.name == 'CTC-0' ? 'roadmap-2024-qeffNjuE.png' : "satellite.png",
+              width: satellite.name == 'CTC-0' ? 15 : 15,
+              height: satellite.name == 'CTC-0' ? 15 : 15
+            }
+          });
+
+          // Track entity reference
+          entitiesRef.current[satellite.name] = entity;
+        }
       });
 
-      const updateSatellitePosition = () => {
-        const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
-        const now = new Date();
-        const positionAndVelocity = satellite.propagate(satrec, now);
+        // Add orbit line for CTC-0
+      const addOrbitLine = (sat) => {
+        const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
+        const gmst = satellite.gstime(new Date());
+        const positions = [];
 
-        if (positionAndVelocity.position) {
-          const gmst = satellite.gstime(now);
-          const geodetic = satellite.eciToGeodetic(
-            positionAndVelocity.position,
-            gmst
-          );
+        for (let i = 0; i < 5800; i += 60) { // Propagate positions for an hour at 1-minute intervals
+          const futureDate = new Date(new Date().getTime() + i * 1000);
+          const positionAndVelocity = satellite.propagate(satrec, futureDate);
+          if (positionAndVelocity.position) {
+            const geodetic = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+            const latitude = Cesium.Math.toDegrees(geodetic.latitude);
+            const longitude = Cesium.Math.toDegrees(geodetic.longitude);
+            const altitude = geodetic.height * 1000; // Convert from km to meters
 
-          const latitude = Cesium.Math.toDegrees(geodetic.latitude);
-          const longitude = Cesium.Math.toDegrees(geodetic.longitude);
-          const altitude = geodetic.height * 1000; // Convert from km to meters
-
-          // Update satellite position
-          satelliteEntity.position = Cesium.Cartesian3.fromDegrees(
-            longitude,
-            latitude,
-            altitude
-          );
+            positions.push(longitude, latitude, altitude);
+          }
         }
+
+        // Add polyline to Cesium viewer
+        viewer.entities.add({
+          name: `${sat.name} Orbit`,
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArrayHeights(positions),
+            width: 2,
+            material: Cesium.Color.GREEN.withAlpha(0.7),
+          },
+        });
       };
 
-      // Update the satellite's position every second
-      setInterval(updateSatellitePosition, 500);
+      const ctcSatellite = sats.find((sat) => sat.name === "CTC-0");
+      if (ctcSatellite) {
+        addOrbitLine(ctcSatellite);
+      }
+
+      const updateSatellitesPosition = () => {
+        // const now = new Date();
+
+        // Get time from Cesium viewer's clock
+        //const cesiumTime = viewer.clock.currentTime; // Cesium's JulianDate
+        const jsDate = new Date(); // Convert to JavaScript Date
+
+        sats.forEach((sat) => {
+          const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
+          const positionAndVelocity = satellite.propagate(satrec, jsDate);
+
+          if (positionAndVelocity.position) {
+            const gmst = satellite.gstime(jsDate);
+            const geodetic = satellite.eciToGeodetic( 
+              positionAndVelocity.position,
+              gmst
+            );
+
+            const latitude = Cesium.Math.toDegrees(geodetic.latitude);
+            const longitude = Cesium.Math.toDegrees(geodetic.longitude);
+            const altitude = geodetic.height * 1000; // Convert from km to meters
+
+            // Update position using SampledPositionProperty
+            const entity = entitiesRef.current[sat.name];
+            if (entity) {
+              const newPosition = Cesium.Cartesian3.fromDegrees(
+                longitude,
+                latitude,
+                altitude
+              );
+              entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
+            }
+          }
+        });
+      };
+
+      // Update positions periodically
+      currentInterval = setInterval(updateSatellitesPosition, 500);
     };
 
     initCesium().catch(console.error);
 
-    // Cleanup
     return () => {
-      if (viewerRef.current) {
-        viewerRef.current.destroy();
-      }
+      if (viewerRef.current) viewerRef.current.destroy();
+      if (currentInterval) clearInterval(currentInterval);
     };
   }, []);
 
