@@ -191,7 +191,10 @@ const SatelliteCesium = () => {
     <div
       id="cesiumContainer"
       style={{ width: "100%", height: "100vh", position: "relative" }}
-    ></div>
+    >
+      <h1 style={{position: 'absolute', zIndex: 100000, left: '43%', top: 25}}>CTC-0 Tracker</h1>
+
+    </div>
   );
 };
 
