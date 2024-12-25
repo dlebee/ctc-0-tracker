@@ -52,11 +52,13 @@ const getSatelites = async function() {
     });
   }
 
-  result.push({
-    name: "CTC-0",
-    tle1: "1 98728U          24358.00000000  .00000000  00000-0  43254-2 0    09",
-    tle2: "2 98728  45.0018 353.7498 0003705   4.7833 137.4401 15.19235095    03"
-  });
+  if (!result.find(t => t.name == 'CTC-0')) {
+    result.push({
+      name: "CTC-0",
+      tle1: "1 98728U          24358.00000000  .00000000  00000-0  43254-2 0    09",
+      tle2: "2 98728  45.0018 353.7498 0003705   4.7833 137.4401 15.19235095    03"
+    });
+  }
 
   console.log('how many sats', result.length);
 
@@ -86,15 +88,15 @@ const SatelliteCesium = () => {
             id: satellite.name,
             name: satellite.name,
             position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
-            // point: {
-            //   pixelSize: 5,
-            //   color: Cesium.Color.GREEN,
-            // },
-            billboard: {
-              image: satellite.name == 'CTC-0' ? 'roadmap-2024-qeffNjuE.png' : "satellite.png",
-              width: satellite.name == 'CTC-0' ? 15 : 15,
-              height: satellite.name == 'CTC-0' ? 15 : 15
-            }
+            point: satellite.name == 'CTC-0' ? undefined : {
+              pixelSize: 2,
+              color: Cesium.Color.WHITE
+            },
+            billboard: satellite.name == 'CTC-0' ? {
+              image: 'ctc-0.png',
+              width: 64,
+              height: 64
+            } : undefined
           });
 
           // Track entity reference
