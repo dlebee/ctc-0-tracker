@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@turf/turf": "^7.1.0",
     "cesium": "^1.124.0",
     "ctc-0-tracker": "file:",
     "leaflet": "^1.9.4",

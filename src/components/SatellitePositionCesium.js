@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import * as satellite from "satellite.js";
+import * as turf from "@turf/turf";
 
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -33,6 +34,23 @@ const fetchOrCache = async function() {
 
   throw new Error('Failed to fetch satelite positions by group');
 }
+
+const fetchOrCacheGeoJson = async () => {
+  const url = "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson";
+
+  if (localStorage.getItem("__CACHED_GEOJSON__")) {
+    return JSON.parse(localStorage.getItem("__CACHED_GEOJSON__"));
+  }
+
+  const response = await fetch(url);
+  if (response.status === 200) {
+    const geoJson = await response.json();
+    localStorage.setItem("__CACHED_GEOJSON__", JSON.stringify(geoJson));
+    return geoJson;
+  }
+
+  throw new Error("Failed to fetch GeoJSON.");
+};
 
 const getSatelites = async function() {
 
@@ -67,12 +85,14 @@ const getSatelites = async function() {
 
 const SatelliteCesium = () => {
   const viewerRef = useRef(null);
+  const [hoveredCountry, setHoveredCountry] = useState("Locating...");
   const entitiesRef = useRef({}); // Track entities by satellite name
   let currentInterval = null;
 
   useEffect(() => {
     const initCesium = async () => {
       const sats = await getSatelites();
+      const geoJson = await fetchOrCacheGeoJson()
 
 
       const imagerySources = Cesium.createDefaultImageryProviderViewModels();
@@ -178,14 +198,29 @@ const SatelliteCesium = () => {
               );
               entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
 
-              if (firstTime && sat.name == 'CTC-0') {
+              if (sat.name == 'CTC-0') {
+                // first time we fly to and track.
+                if (firstTime) {
+                  // flying to CTC-0, at first geo positioning.
+                  viewer.scene.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
+                  });
 
-                // flying to CTC-0, at first geo positioning.
-                viewer.scene.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
-                });
+                  viewer.selectedEntity = entity;
+                }
 
-                viewer.selectedEntity = entity;
+                // Check which country the satellite is over
+                if (geoJson) {
+                  setHoveredCountry('Unknown');
+                  const point = turf.point([longitude, latitude]);
+                  for (const feature of geoJson.features) {
+                    const match = turf.booleanPointInPolygon(point, feature);
+                    if (match) {
+                      setHoveredCountry(feature.properties.admin || "Unknown");
+                      break;
+                    }
+                  }
+                }
               }
             }
           }
@@ -211,7 +246,11 @@ const SatelliteCesium = () => {
       id="cesiumContainer"
       style={{ width: "100%", height: "100vh", position: "relative" }}
     >
-      <h1 style={{position: 'absolute', zIndex: 100000, left: '43%', top: 25}}>CTC-0 Tracker 🎄</h1>
+      <div style={{top: 25, position: 'absolute', zIndex: 1000000, left: 0, right: 0, color: 'green'}}>
+        <h1 style={{textAlign: 'center', fontWeight: 'bold'}}>🎅 CTC-0 Tracker 🎄</h1>
+        <p style={{textAlign: 'center', fontWeight: 'bold'}}>currently over: {hoveredCountry}</p>
+      </div>
+ 
 
     </div>
   );
