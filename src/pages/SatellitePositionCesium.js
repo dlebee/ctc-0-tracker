@@ -110,7 +110,7 @@ const SatelliteCesium = () => {
         const gmst = satellite.gstime(new Date());
         const positions = [];
 
-        for (let i = 0; i < 5800; i += 60) { // Propagate positions for an hour at 1-minute intervals
+        for (let i = 0; i < 5700; i += 60) { // Propagate positions for an hour at 1-minute intervals
           const futureDate = new Date(new Date().getTime() + i * 1000);
           const positionAndVelocity = satellite.propagate(satrec, futureDate);
           if (positionAndVelocity.position) {
