@@ -94,8 +94,8 @@ const SatelliteCesium = () => {
             },
             billboard: satellite.name == 'CTC-0' ? {
               image: 'ctc-0.png',
-              width: 64,
-              height: 64
+              width: 48,
+              height: 48
             } : undefined
           });
 
