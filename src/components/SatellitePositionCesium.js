@@ -112,25 +112,46 @@ const SatelliteCesium = () => {
           })
         ),
       });
+
+      viewer.scene.moon = new Cesium.Moon({
+        show: true,
+        onlySunLighting: false
+      });
       viewerRef.current = viewer;
 
       // Initialize Satellite Entities
       sats.forEach((satellite) => {
         if (!entitiesRef.current[satellite.name]) {
           // Add entity to the viewer
+
+          let billboard = undefined;
+          let point = undefined;
+
+          if (satellite.name == 'CTC-0') {
+            billboard = {
+              image: 'ctc-0.png',
+              width: 32,
+              height: 32
+            };
+          } else if (satellite.name.startsWith('ISS (ZARYA)')) {
+            billboard = {
+              image: 'iss.png',
+              width: 64,
+              height: 64
+            };
+          } else {
+            point = {
+              pixelSize: 2,
+              color: Cesium.Color.WHITE
+            };
+          }
+
           const entity = viewer.entities.add({
             id: satellite.name,
             name: satellite.name,
             position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
-            point: satellite.name == 'CTC-0' ? undefined : {
-              pixelSize: 2,
-              color: Cesium.Color.WHITE
-            },
-            billboard: satellite.name == 'CTC-0' ? {
-              image: 'ctc-0.png',
-              width: 32,
-              height: 32
-            } : undefined
+            point: point,
+            billboard: billboard
           });
 
           // Track entity reference
