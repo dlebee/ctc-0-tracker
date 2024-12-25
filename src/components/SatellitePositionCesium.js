@@ -74,9 +74,15 @@ const SatelliteCesium = () => {
     const initCesium = async () => {
       const sats = await getSatelites();
 
+
+      const imagerySources = Cesium.createDefaultImageryProviderViewModels();
+      const defaultBaseLayer = imagerySources.find(t => t.name == "Stadia Alidade Smooth Dark");
+      
       // Initialize Cesium Viewer
       const viewer = new Cesium.Viewer("cesiumContainer", {
         terrainProvider: await Cesium.createWorldTerrainAsync(),
+        imageryProviderViewModels: imagerySources,
+        selectedImageryProviderViewModel: defaultBaseLayer
       });
       viewerRef.current = viewer;
 
@@ -94,8 +100,8 @@ const SatelliteCesium = () => {
             },
             billboard: satellite.name == 'CTC-0' ? {
               image: 'ctc-0.png',
-              width: 48,
-              height: 48
+              width: 32,
+              height: 32
             } : undefined
           });
 
@@ -110,7 +116,7 @@ const SatelliteCesium = () => {
         const gmst = satellite.gstime(new Date());
         const positions = [];
 
-        for (let i = 0; i < 5700; i += 60) { // Propagate positions for an hour at 1-minute intervals
+        for (let i = 0; i < 5700; i += 20) { // Propagate positions for an hour at 1-minute intervals
           const futureDate = new Date(new Date().getTime() + i * 1000);
           const positionAndVelocity = satellite.propagate(satrec, futureDate);
           if (positionAndVelocity.position) {
@@ -139,6 +145,7 @@ const SatelliteCesium = () => {
         addOrbitLine(ctcSatellite);
       }
 
+      let firstTime = true;
       const updateSatellitesPosition = () => {
         // const now = new Date();
 
@@ -170,9 +177,21 @@ const SatelliteCesium = () => {
                 altitude
               );
               entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
+
+              if (firstTime && sat.name == 'CTC-0') {
+
+                // flying to CTC-0, at first geo positioning.
+                viewer.scene.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
+                });
+
+                viewer.selectedEntity = entity;
+              }
             }
           }
         });
+
+        firstTime = false;
       };
 
       // Update positions periodically
