@@ -245,7 +245,7 @@ const SatelliteCesium = () => {
 
                 // Check which country the satellite is over
                 if (geoJson) {
-                  setHoveredCountry('Unknown');
+                  setHoveredCountry('International Waters');
                   const point = turf.point([longitude, latitude]);
                   for (const feature of geoJson.features) {
                     const match = turf.booleanPointInPolygon(point, feature);
