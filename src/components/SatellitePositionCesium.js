@@ -79,6 +79,14 @@ const getSatelites = async function() {
     });
   }
 
+  if (!result.find((t) => t.name === 'Santa Claus 🎅')) {
+    result.push({
+      name: "Santa Claus 🎅",
+      tle1: "1 25544U 98067A   24359.68458358  .00023188  00000+0  41052-3 0  9996",
+      tle2: "2 25544  51.6394  91.5363 0005189   2.3927 145.3896 15.90168044488092"
+    });
+  }
+
   console.log('how many sats', result.length);
 
   return result;  
@@ -137,6 +145,12 @@ const SatelliteCesium = () => {
             billboard = {
               image: 'iss.png',
               width: 64,
+              height: 64
+            };
+          } else if (satellite.name == 'Santa Claus 🎅') {
+            billboard = {
+              image: 'santa.png',
+              width: 128,
               height: 64
             };
           } else {
