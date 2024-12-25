@@ -76,7 +76,7 @@ const SatelliteCesium = () => {
 
 
       const imagerySources = Cesium.createDefaultImageryProviderViewModels();
-      const defaultBaseLayer = imagerySources.find(t => t.name == "Stadia Alidade Smooth Dark");
+      const defaultBaseLayer = imagerySources.find(t => t.name == "Earth at night");
       
       // Initialize Cesium Viewer
       const viewer = new Cesium.Viewer("cesiumContainer", {
