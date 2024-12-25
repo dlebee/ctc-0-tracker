@@ -57,6 +57,7 @@ const getSatelites = async function() {
 
   const text = await fetchOrCache();
   const lines = text.split('\r\n');
+
   let result = [];
   //let maxSat = 1;
   for(let i = 0 ; i+2 < lines.length; i+= 3) {
@@ -87,7 +88,9 @@ const SatelliteCesium = () => {
   const viewerRef = useRef(null);
   const [hoveredCountry, setHoveredCountry] = useState("Locating...");
   const entitiesRef = useRef({}); // Track entities by satellite name
+  const intervalSetRef = useRef(false);
   let currentInterval = null;
+  let lastTime = null;
 
   useEffect(() => {
     const initCesium = async () => {
@@ -102,7 +105,12 @@ const SatelliteCesium = () => {
       const viewer = new Cesium.Viewer("cesiumContainer", {
         terrainProvider: await Cesium.createWorldTerrainAsync(),
         imageryProviderViewModels: imagerySources,
-        selectedImageryProviderViewModel: defaultBaseLayer
+        selectedImageryProviderViewModel: defaultBaseLayer,
+        clockViewModel: new Cesium.ClockViewModel(
+          new Cesium.Clock({
+            shouldAnimate: true, // Ensure the clock starts unpaused
+          })
+        ),
       });
       viewerRef.current = viewer;
 
@@ -170,15 +178,20 @@ const SatelliteCesium = () => {
         // const now = new Date();
 
         // Get time from Cesium viewer's clock
-        //const cesiumTime = viewer.clock.currentTime; // Cesium's JulianDate
-        const jsDate = new Date(); // Convert to JavaScript Date
+        const cesiumTime = viewer.clock.currentTime; // Cesium's JulianDate
+        const dateOf = Cesium.JulianDate.toDate(cesiumTime);
+
+        //const jsDate = new Date(); // Convert to JavaScript Date
 
         sats.forEach((sat) => {
           const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
-          const positionAndVelocity = satellite.propagate(satrec, jsDate);
+          const positionAndVelocity = satellite.propagate(satrec, dateOf);
+          //const positionAndVelocity = satellite.propagate(satrec, jsDate);
 
           if (positionAndVelocity.position) {
-            const gmst = satellite.gstime(jsDate);
+            //const gmst = satellite.gstime(jsDate);
+            
+            const gmst = satellite.gstime(dateOf);
             const geodetic = satellite.eciToGeodetic( 
               positionAndVelocity.position,
               gmst
@@ -230,7 +243,10 @@ const SatelliteCesium = () => {
       };
 
       // Update positions periodically
-      currentInterval = setInterval(updateSatellitesPosition, 500);
+      if (!intervalSetRef.current) {
+        currentInterval = setInterval(updateSatellitesPosition, 500);
+        intervalSetRef.current = true;
+      }
     };
 
     initCesium().catch(console.error);
