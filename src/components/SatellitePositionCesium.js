@@ -13,27 +13,41 @@ if (typeof window !== "undefined") {
 }
 
 const fetchOrCache = async function() {
-
-
   const url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle";
-  
-  
-  //const starlinkUrl = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle";
 
-  if (localStorage.getItem('__CACHED_POSITIONS__' + url)) {
-    let result = localStorage.getItem('__CACHED_POSITIONS__' + url);
-    return result;
+  const cacheKey = '__CACHED_POSITIONS__' + url;
+  const cacheExpKey = cacheKey + '_EXP';
+
+  // Check if the cache exists and is valid
+  const cachedData = localStorage.getItem(cacheKey);
+  const cachedTimestamp = localStorage.getItem(cacheExpKey);
+
+  if (cachedData && cachedTimestamp) {
+    const now = Date.now();
+    const expirationTime = parseInt(cachedTimestamp, 10);
+
+    // If the cache is still valid, return the cached data
+    if (now - expirationTime < 6 * 60 * 60 * 1000) { // 6 hours in milliseconds
+      return cachedData;
+    }
   }
 
-  const response = await fetch(url)
-  if (response.status == 200) {
+  // If no valid cache, fetch the content
+  const response = await fetch(url);
+
+  if (response.status === 200) {
     const text = await response.text();
-    localStorage.setItem('__CACHED_POSITIONS__' + url, text);
+
+    // Update cache and expiration timestamp
+    localStorage.setItem(cacheKey, text);
+    localStorage.setItem(cacheExpKey, Date.now().toString());
+
     return text;
   }
 
-  throw new Error('Failed to fetch satelite positions by group');
-}
+  throw new Error('Failed to fetch satellite positions by group');
+};
+
 
 const fetchOrCacheGeoJson = async () => {
   const url = "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson";
