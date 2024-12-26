@@ -9,6 +9,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import useSatellites from "@/hooks/useSatellites";
 import useGeo from "@/hooks/useGeo";
 import useWorldTerrain from "@/hooks/useWorldTerrain";
+import useCtcObservations from "@/hooks/useCtcObservations";
 
 
 if (typeof window !== "undefined") {
@@ -218,8 +219,10 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firs
 const SatelliteCesium = () => {
   const [hoveredCountry, setHoveredCountry] = useState("Locating...");
   const { data: sats, loading: satsLoading, error: satsError } = useSatellites();
+  const { data: observations, loading: observationsLoading, error: observationsError } = useCtcObservations();
   const { data: geo, loading: geoLoading, error: geoError } = useGeo();
   const { viewerRef, viewerReady } = useCesiumViewer("cesiumContainer");
+  const upodatedTLERef = useRef(false);
 
   useEffect(() => {
     if (!viewerRef.current || !sats || !geo) {
@@ -240,6 +243,33 @@ const SatelliteCesium = () => {
       }
     };
   }, [viewerReady, sats]);
+
+  useEffect(() => {
+    if (observations && observations.length) {
+      if (sats.length) {
+        if (upodatedTLERef.current) {
+          return;
+        }
+
+        const ctc0 = sats.find(t => t.name == 'CTC-0');
+        if (ctc0) {
+          if (ctc0.tle1 != observations[0].tle1 && ctc0.tle2 != observations[0].tle2) {
+            ctc0.tle1 = observations[0].tle1;
+            ctc0.tle2 = observations[1].tle2;
+            console.log('updated TLE from latest satnog observation');
+          } else {
+            console.log('got the same TLE from latest satnog observation');
+          }
+        }
+
+        upodatedTLERef.current = true;
+      }
+    }
+
+    return () => {
+      upodatedTLERef.current = false;
+    }
+  }, [sats, observations]);
 
   const topAbsoluteContent = satsLoading && geoLoading ?
     <>
