@@ -101,6 +101,13 @@ const getSatelites = async function() {
     });
   }
 
+  // easter-egg :D 
+  result.push({
+    name: "space-roadster",
+    tle1: "1 59228U 24048A   24338.88712994 -.00004807  00000+0  00000+0 0  9990",
+    tle2: "2 59228  29.5806 355.5889 3256158 188.2034 162.4923  1.03009986    15"
+  });
+
   console.log('how many sats', result.length);
 
   return result;  
@@ -152,8 +159,8 @@ const SatelliteCesium = () => {
           if (satellite.name == 'CTC-0') {
             billboard = {
               image: 'ctc-0.png',
-              width: 32,
-              height: 32
+              width: 48,
+              height: 48
             };
           } else if (satellite.name.startsWith('ISS (ZARYA)')) {
             billboard = {
@@ -167,10 +174,22 @@ const SatelliteCesium = () => {
               width: 128,
               height: 64
             };
-          } else {
-            point = {
-              pixelSize: 2,
-              color: Cesium.Color.WHITE
+          } else if (satellite.name == 'space-roadster') {
+            billboard = {
+              image: 'roadster.png',
+              width: 64,
+              height: 64
+              
+            };
+          }else {
+            // point = {
+            //   pixelSize: 2,
+            //   color: Cesium.Color.WHITE
+            // };
+            billboard = {
+              image: 'satellite.png',
+              width: 12,
+              height: 12
             };
           }
 
