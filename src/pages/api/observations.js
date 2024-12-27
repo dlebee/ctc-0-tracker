@@ -39,5 +39,5 @@ export default async function handler(req, res) {
   }
 
   cache.set(cache_key, result);
-  res.status(200).json(json);
+  res.status(200).json(result);
 }
