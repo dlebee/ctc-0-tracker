@@ -56,3 +56,7 @@ a {
       display: block;
   }
 }
+
+.cesium-viewer-toolbar {
+  z-index: 2;
+}

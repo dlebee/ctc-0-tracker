@@ -301,19 +301,23 @@ const SatelliteCesium = () => {
     </>;
 
   return (
-    <div
-      id="cesiumContainer"
-      style={{ width: "100%", height: "100vh", position: "relative" }}
-    >
-      <div style={{ top: 25, position: 'absolute', zIndex: 1000000, left: 0, right: 0, color: 'green' }}>
-        {topAbsoluteContent}
+    <>
+      <div
+        id="cesiumContainer"
+        style={{ width: "100%", height: "100vh", position: "relative" }}
+      >
+        
+        
       </div>
 
-      <div style={{ bottom: 60, right: 25, zIndex: 1000000, position: 'absolute' }}>
-        {latestObservation ? <Observation observation={latestObservation}></Observation> : null}
+      <div style={{ top: 25, position: 'absolute', zIndex: 1, left: 0, right: 0, color: 'green', userSelect: 'none' }}>
+      {topAbsoluteContent}
       </div>
-      
-    </div>
+
+      <div style={{ bottom: 60, right: 25, zIndex: 1, position: 'absolute' }}>
+      {latestObservation ? <Observation observation={latestObservation}></Observation> : null}
+      </div>
+    </>
   );
 };
 
