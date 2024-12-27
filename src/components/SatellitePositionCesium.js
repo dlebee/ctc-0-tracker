@@ -197,7 +197,7 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firs
               destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
             });
 
-            viewer.selectedEntity = entity;
+            //viewer.selectedEntity = entity;
           }
 
           // Check which country the satellite is over
