@@ -281,7 +281,7 @@ const SatelliteCesium = () => {
     </>
     :
     <>
-      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}>🎅 CTC-0 Tracker 🎄</h1>
+      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}>🌟 CTC-0 Tracker ✨</h1>
       <p style={{ textAlign: 'center', fontWeight: 'bold' }}>currently over: {hoveredCountry}</p>
     </>;
 
