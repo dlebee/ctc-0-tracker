@@ -283,6 +283,7 @@ const SatelliteCesium = () => {
     <>
       <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}>🌟 CTC-0 Tracker ✨</h1>
       <p style={{ textAlign: 'center', fontWeight: 'bold' }}>currently over: {hoveredCountry}</p>
+      <p style={{ textAlign: 'center'}}>Happy new year!</p>
     </>;
 
   return (
