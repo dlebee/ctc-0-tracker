@@ -1,11 +1,15 @@
+function formatDate(date) {
+    return new Date(date).toString();
+}
+
 const Observation = ({ observation }) => {
 
     return (
         <div className="observation-card">
             <h3 style={{ textAlign: 'center', marginBottom: '5px' }}>Latest Observation</h3>
 
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <p style={{ margin: '0', fontSize: '14px', color: '#ccc' }}>{observation.start}</p>
+            <div style={{ width: '175px', textAlign: 'center', marginBottom: '20px' }}>
+                <p style={{ whiteSpace: 'wrap', margin: '0', fontSize: '14px', color: '#ccc' }}>{formatDate(observation.start)}</p>
             </div>
 
             <div style={{ marginBottom: '15px' }}>
