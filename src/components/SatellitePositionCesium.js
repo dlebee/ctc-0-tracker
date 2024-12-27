@@ -161,9 +161,11 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firs
   const dateOf = Cesium.JulianDate.toDate(cesiumTime);
 
   sats.forEach((sat) => {
+
     const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
     const positionAndVelocity = satellite.propagate(satrec, dateOf);
 
+  
     if (positionAndVelocity.position) {
       const gmst = satellite.gstime(dateOf);
       const geodetic = satellite.eciToGeodetic( 
@@ -183,7 +185,9 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firs
           latitude,
           altitude
         );
+
         entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
+
 
         if (sat.name == 'CTC-0') {
           // first time we fly to and track.
