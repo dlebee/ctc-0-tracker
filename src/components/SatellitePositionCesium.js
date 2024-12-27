@@ -265,12 +265,18 @@ const SatelliteCesium = () => {
 
         const ctc0 = sats.find(t => t.name == 'CTC-0');
         if (ctc0) {
-          if (ctc0.tle1 != observations[0].tle1 && ctc0.tle2 != observations[0].tle2) {
-            ctc0.tle1 = observations[0].tle1;
-            ctc0.tle2 = observations[1].tle2;
-            console.log('updated TLE from latest satnog observation');
+          // find a good observation..
+          const goodObservation = observations.find(t => t.status == 'good');
+          if (goodObservation) {
+            if (ctc0.tle1 != goodObservation.tle1 && ctc0.tle2 != goodObservation.tle2) {
+              ctc0.tle1 = goodObservation.tle1;
+              ctc0.tle2 = goodObservation.tle2;
+              console.log('updated TLE from latest good satnog observation');
+            } else {
+              console.log('got the same TLE from latest good satnog observation');
+            }
           } else {
-            console.log('got the same TLE from latest satnog observation');
+            console.warn('no good status observation in result.')
           }
         }
 
