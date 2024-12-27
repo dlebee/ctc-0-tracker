@@ -103,8 +103,8 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry) => {
       // };
       billboard = {
         image: 'satellite.png',
-        width: 12,
-        height: 12
+        width: 8,
+        height: 8
       };
     }
 
