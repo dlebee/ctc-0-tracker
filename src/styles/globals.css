@@ -40,3 +40,19 @@ a {
     color-scheme: dark;
   }
 }
+
+
+.observation-card {
+  display: none;
+  background: black;
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 768px) {
+  .observation-card {
+      display: block;
+  }
+}

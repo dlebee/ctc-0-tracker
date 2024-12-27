@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import * as satellite from "satellite.js";
 import * as turf from "@turf/turf";
@@ -10,6 +10,7 @@ import useSatellites from "@/hooks/useSatellites";
 import useGeo from "@/hooks/useGeo";
 import useWorldTerrain from "@/hooks/useWorldTerrain";
 import useCtcObservations from "@/hooks/useCtcObservations";
+import Observation from "./observation";
 
 
 if (typeof window !== "undefined") {
@@ -21,7 +22,6 @@ const useCesiumViewer = (containerId) => {
   const viewerRef = useRef(null);
   const { data: worldTerrain, loading, error } = useWorldTerrain();
   const [viewerReady, setViewerReady] = useState(false);
-
 
   useEffect(() => {
 
@@ -225,6 +225,14 @@ const SatelliteCesium = () => {
   const { data: sats, loading: satsLoading, error: satsError } = useSatellites();
   const { data: observations, loading: observationsLoading, error: observationsError } = useCtcObservations();
   const { data: geo, loading: geoLoading, error: geoError } = useGeo();
+
+  const latestObservation = useMemo(() => {
+    if (observations && observations.length)
+      return observations[0];
+
+    return null;
+  }, [observations]);
+
   const { viewerRef, viewerReady } = useCesiumViewer("cesiumContainer");
   const upodatedTLERef = useRef(false);
 
@@ -294,6 +302,11 @@ const SatelliteCesium = () => {
       <div style={{ top: 25, position: 'absolute', zIndex: 1000000, left: 0, right: 0, color: 'green' }}>
         {topAbsoluteContent}
       </div>
+
+      <div style={{ bottom: 60, right: 25, zIndex: 1000000, position: 'absolute' }}>
+        {latestObservation ? <Observation observation={latestObservation}></Observation> : null}
+      </div>
+      
     </div>
   );
 };
