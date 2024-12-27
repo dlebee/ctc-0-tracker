@@ -78,7 +78,7 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry) => {
         width: 48,
         height: 48
       };
-    } else if (satellite.name.startsWith('ISS (ZARYA)')) {
+    } else if (satellite.id == '25544') {
       billboard = {
         image: 'iss.png',
         width: 64,
