@@ -17,7 +17,7 @@ if (typeof window !== "undefined") {
   window.CESIUM_BASE_URL = process.env.CESIUM_BASE_URL || "/cesium";
 }
 
-const useCesiumViewer = (containerId) => {
+const useCesiumViewer = (containerId, toggleSatDisplayCallback) => {
 
   const viewerRef = useRef(null);
   const { data: worldTerrain, loading, error } = useWorldTerrain();
@@ -49,6 +49,23 @@ const useCesiumViewer = (containerId) => {
       onlySunLighting: false
     });
 
+    const toolbar = viewer.container.querySelector('.cesium-viewer-toolbar');
+
+    // Create a new button
+    const customButton = document.createElement('button');
+    customButton.textContent = '🛰';
+    customButton.className = 'cesium-button cesium-toolbar-button cesium-toggle-sats';
+
+    // Add a click event listener to the button
+    customButton.addEventListener('click', () => {
+      toggleSatDisplayCallback();
+    });
+
+    // Append the button to the toolbar
+    if (toolbar) {
+        toolbar.appendChild(customButton);
+    }
+
     viewerRef.current = viewer;
     setViewerReady(true);
     console.log('terrain created... and assigned viewerRef');
@@ -66,7 +83,7 @@ const useCesiumViewer = (containerId) => {
   return { viewerRef, viewerReady };
 };
 
-const addSatsToCesium = (viewer, sats, geo, setHoveredCountry) => {
+const addSatsToCesium = (viewer, sats, geo, setHoveredCountry, showOtherSats) => {
   sats.forEach((satellite) => {
     // Add entity to the viewer
     let billboard = undefined;
@@ -113,25 +130,33 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry) => {
       name: satellite.name,
       position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
       point: point,
-      billboard: billboard
+      billboard: billboard,
+      show: showOtherSats ? true : satellite.name == 'CTC-0'
     });
-  });
 
-  const creditcoin0 = sats.find(t => t.name == 'CTC-0');
-  if (creditcoin0) {
-    addOrbitLine(viewer, creditcoin0);
-  }
+    if (satellite.name == 'CTC-0') {
+      addOrUpdateOrbitLine(viewer, satellite);
+    }
+  });
   
-  updateSatellitesPosition(viewer, sats, geo, setHoveredCountry, true);
+  updateSatellitesPosition(viewer, sats, geo, setHoveredCountry, showOtherSats, true);
 };
 
-const addOrbitLine = (viewer, sat) => {
+const mapNow = (viewer) => {
+  const cesiumTime = viewer.clock.currentTime; // Cesium's JulianDate
+  const dateOf = Cesium.JulianDate.toDate(cesiumTime);
+  return dateOf;
+}
+
+const addOrUpdateOrbitLine = (viewer, sat) => {
+
+  const now = mapNow(viewer);
   const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
-  const gmst = satellite.gstime(new Date());
+  const gmst = satellite.gstime(now);
   const positions = [];
 
   for (let i = 0; i < 5700; i += 20) { // Propagate positions for an hour at 1-minute intervals
-    const futureDate = new Date(new Date().getTime() + i * 1000);
+    const futureDate = new Date(now.getTime() + i * 1000);
     const positionAndVelocity = satellite.propagate(satrec, futureDate);
     if (positionAndVelocity.position) {
       const geodetic = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
@@ -143,24 +168,43 @@ const addOrbitLine = (viewer, sat) => {
     }
   }
 
-  // Add polyline to Cesium viewer
-  viewer.entities.add({
-    name: `${sat.name} Orbit`,
-    polyline: {
+  const existing = viewer.entities.getById('ctc-0-orbit');
+  if (existing) {
+    existing.polyline = {
       positions: Cesium.Cartesian3.fromDegreesArrayHeights(positions),
       width: 2,
       material: Cesium.Color.GREEN.withAlpha(0.7),
-    },
-  });
+    };
+  } else {
+    // Add polyline to Cesium viewer
+    viewer.entities.add({
+      id: 'ctc-0-orbit',
+      name: `${sat.name} Orbit`,
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArrayHeights(positions),
+        width: 2,
+        material: Cesium.Color.GREEN.withAlpha(0.7),
+      },
+    });
+  }
 };
 
-const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firstTime = false) => {
+const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, showOtherSats, firstTime = false) => {
   
   // Get time from Cesium viewer's clock
   const cesiumTime = viewer.clock.currentTime; // Cesium's JulianDate
   const dateOf = Cesium.JulianDate.toDate(cesiumTime);
 
   sats.forEach((sat) => {
+
+    if (sat.name != 'CTC-0' && !showOtherSats) {
+      const entity = viewer.entities.getById(sat.id);
+      if (entity) {
+        entity.show = false;
+      }
+
+      return;
+    }
 
     const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
     const positionAndVelocity = satellite.propagate(satrec, dateOf);
@@ -185,6 +229,10 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, firs
           latitude,
           altitude
         );
+
+        if (entity.show == false) {
+          entity.show = true;
+        }
 
         entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
 
@@ -225,6 +273,7 @@ const SatelliteCesium = () => {
   const { data: sats, loading: satsLoading, error: satsError } = useSatellites();
   const { data: observations, loading: observationsLoading, error: observationsError } = useCtcObservations();
   const { data: geo, loading: geoLoading, error: geoError } = useGeo();
+  const [displayOtherSatellites, setDisplayOtherSatellites] = useState(false);
 
   const latestObservation = useMemo(() => {
     if (observations && observations.length)
@@ -233,7 +282,10 @@ const SatelliteCesium = () => {
     return null;
   }, [observations]);
 
-  const { viewerRef, viewerReady } = useCesiumViewer("cesiumContainer");
+  const { viewerRef, viewerReady } = useCesiumViewer("cesiumContainer", () => {
+      setDisplayOtherSatellites(p => !p); 
+  });
+
   const upodatedTLERef = useRef(false);
 
   useEffect(() => {
@@ -242,19 +294,27 @@ const SatelliteCesium = () => {
     }
 
     const viewer = viewerRef.current;
-    addSatsToCesium(viewer, sats, geo, setHoveredCountry);
+    addSatsToCesium(viewer, sats, geo, setHoveredCountry, displayOtherSatellites);
 
     const intervalId = setInterval(() => {
-      updateSatellitesPosition(viewer, sats, geo, setHoveredCountry, false);
+      updateSatellitesPosition(viewer, sats, geo, setHoveredCountry, displayOtherSatellites, false);
     }, 500);
+
+    const orbitLineUpdateIntervalId = setInterval(() => {
+      const ctc0 = sats.find(t => t.name == 'CTC-0');
+      if (ctc0) {
+        addOrUpdateOrbitLine(viewer, ctc0);
+      }
+    }, 20000);
 
     return () => {
       clearInterval(intervalId);
+      clearInterval(orbitLineUpdateIntervalId);
       if (viewer.entities) {
         viewer.entities.removeAll();
       }
     };
-  }, [viewerReady, sats]);
+  }, [viewerReady, sats, displayOtherSatellites]);
 
   useEffect(() => {
     if (observations && observations.length) {
@@ -295,9 +355,9 @@ const SatelliteCesium = () => {
     </>
     :
     <>
-      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}>🌟 CTC-0 Tracker ✨</h1>
-      <p style={{ textAlign: 'center', fontWeight: 'bold' }}>currently over: {hoveredCountry}</p>
-      <p style={{ textAlign: 'center'}}>Happy new year!</p>
+      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}><img height="32" src="ctc-0.png"/> CTC-0 Tracker</h1>
+      <p style={{ textAlign: 'center' }}>Currently over: <strong>{hoveredCountry}</strong></p>
+      {/* <p style={{ textAlign: 'center'}}>Happy new year!</p> */}
     </>;
 
   return (
