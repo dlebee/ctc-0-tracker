@@ -32,11 +32,11 @@ const useCesiumViewer = (containerId, toggleSatDisplayCallback) => {
       return;
   
     const imagerySources = Cesium.createDefaultImageryProviderViewModels();
-    const defaultBaseLayer = imagerySources.find(t => t.name == "Earth at night");
+    //const defaultBaseLayer = imagerySources.find(t => t.name == "Earth at night");
     const viewer = new Cesium.Viewer(containerId, {
       terrainProvider: worldTerrain,
       imageryProviderViewModels: imagerySources,
-      selectedImageryProviderViewModel: defaultBaseLayer,
+      //selectedImageryProviderViewModel: defaultBaseLayer,
       clockViewModel: new Cesium.ClockViewModel(
         new Cesium.Clock({
           shouldAnimate: true, // Ensure the clock starts unpaused

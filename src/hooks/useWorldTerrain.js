@@ -1,6 +1,8 @@
 import * as Cesium from "cesium";
 import { useState, useEffect } from 'react';
 
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkZDZlZDBjZi0xMjg1LTRiOWEtOTYyMS1jZmVmNzA5MDY3MGYiLCJpZCI6MjczMTg0LCJpYXQiOjE3Mzg2MjcwNjZ9.OsYdZsjcDjqAP6s9xQ75961Pv5a5F4hSbEmG1S1ZIJY";
+
 const useWorldTerrain = function () {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
