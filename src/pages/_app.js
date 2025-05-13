@@ -3,11 +3,13 @@ import "@/styles/globals.css";
 import dynamic from 'next/dynamic';
 
 //const SatellitePosition2D = dynamic(() => import('./SatellitePosition2D'), { ssr: false });
-const SatellitePositionCesium = dynamic(() => import('../components/SatellitePositionCesium'), { ssr: false });
+// const SatellitePositionCesium = dynamic(() => import('../components/SatellitePositionCesium'), { ssr: false });
+const NextFlyBy = dynamic(() => import('../components/NextFlyBy'), { ssr: false });
 
 export default function App({ Component, pageProps }) {
   return <>
     {/* <SatellitePosition2D></SatellitePosition2D> */}
-    <SatellitePositionCesium></SatellitePositionCesium>
+    {/* <SatellitePositionCesium></SatellitePositionCesium> */}
+    <NextFlyBy></NextFlyBy>
   </>
 }
