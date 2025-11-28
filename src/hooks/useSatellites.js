@@ -55,6 +55,15 @@ const parseData = (text) => {
         });
     }
 
+    // Add hardcoded CTC-0 satellite
+    if (!result.find(t => t.name == 'CTC-0')) {
+        result.push({
+            id: "62401",
+            name: "CTC-0",
+            tle1: "1 62401U 24247AA  25332.19525845  .00018724  00000-0  61599-3 0  9991",
+            tle2: "2 62401  44.9749 301.3576 0003214 127.8691 232.2484 15.31294714 52325"
+        });
+    }
     // Add hardcoded CTC-1 satellites
     if (!result.find(t => t.name == 'CTC-1A')) {
         result.push({

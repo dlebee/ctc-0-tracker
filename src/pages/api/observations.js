@@ -12,14 +12,20 @@ export default async function handler(req, res) {
   }
 
   const apiBaseUrl = `https://network.satnogs.org`;
-  const noradIds = ['98482', '98481', '98480']; // CTC-1A, CTC-1B, CTC-1C
+  // CTC-0, CTC-1A, CTC-1B, CTC-1C sat_ids
+  const satIds = [
+    'VWXG-4101-0824-5480-8078', // CTC-0
+    'OTUO-9494-3471-7180-4596', // CTC-1A
+    'CDDD-0280-4973-5946-866',  // CTC-1B
+    'IJQV-1195-2515-8742-0084'  // CTC-1C
+  ];
   
   // Fetch good observations for all 3 satellites
-  const goodPromises = noradIds.map(id => 
-    fetch(`${apiBaseUrl}/api/observations?status=good&satellite__norad_cat_id=${id}`)
+  const goodPromises = satIds.map(satId => 
+    fetch(`${apiBaseUrl}/api/observations?status=good&sat_id=${satId}`)
   );
-  const badPromises = noradIds.map(id => 
-    fetch(`${apiBaseUrl}/api/observations?status=bad&satellite__norad_cat_id=${id}`)
+  const badPromises = satIds.map(satId => 
+    fetch(`${apiBaseUrl}/api/observations?status=bad&sat_id=${satId}`)
   );
   
   const [goodResponses, badResponses] = await Promise.all([
@@ -48,14 +54,16 @@ export default async function handler(req, res) {
   let result;
   if (allBadData.length > 0) {
     result = allGoodData.concat(allBadData);
-    result.sort((a, b) => {
-      const aParsed = new Date(a.start);
-      const bParsed = new Date(b.start);
-      return bParsed - aParsed;
-    });
   } else {
     result = allGoodData;
   }
+
+  // Sort by date (newest first)
+  result.sort((a, b) => {
+    const aParsed = new Date(a.start);
+    const bParsed = new Date(b.start);
+    return bParsed - aParsed;
+  });
 
   cache.set(cache_key, result);
   res.status(200).json(result);
