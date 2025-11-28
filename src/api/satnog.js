@@ -1,5 +1,5 @@
 
-const fetchCtc0observationsFromSatNog = async () => {
+const fetchCtcObservationsFromSatNog = async () => {
     // const apiBaseUrl = `https://network.satnogs.org`;
     // const fullUrl = `${apiBaseUrl}/api/observations/?id=&status=good&satellite__norad_cat_id=98728`;
     const result = await fetch('/api/observations');
@@ -7,7 +7,7 @@ const fetchCtc0observationsFromSatNog = async () => {
         return await result.json();
     } 
 
-    throw new Error('failed to fetch ctc-0 observations from satnog');
+    throw new Error('failed to fetch ctc-1 observations from satnog');
 }
 
-export { fetchCtc0observationsFromSatNog };
+export { fetchCtcObservationsFromSatNog };

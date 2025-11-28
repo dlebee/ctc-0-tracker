@@ -1,4 +1,4 @@
-import { fetchCtc0observationsFromSatNog } from '@/api/satnog';
+import { fetchCtcObservationsFromSatNog } from '@/api/satnog';
 import { useState, useEffect } from 'react';
 
 
@@ -15,7 +15,7 @@ const useCtcObservations = function () {
 
         const refreshObservations = function () {
             setLoading(true);
-            fetchCtc0observationsFromSatNog()
+            fetchCtcObservationsFromSatNog()
                 .then((data) => {
                     if (isMounted) {
                         setData(data);

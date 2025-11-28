@@ -89,7 +89,7 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry, showOtherSats) =>
     let billboard = undefined;
     let point = undefined;
 
-    if (satellite.name == 'CTC-0') {
+    if (satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C') {
       billboard = {
         image: 'ctc-0.png',
         width: 48,
@@ -131,10 +131,10 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry, showOtherSats) =>
       position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
       point: point,
       billboard: billboard,
-      show: showOtherSats ? true : satellite.name == 'CTC-0'
+      show: showOtherSats ? true : (satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C')
     });
 
-    if (satellite.name == 'CTC-0') {
+    if (satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C') {
       addOrUpdateOrbitLine(viewer, satellite);
     }
   });
@@ -168,22 +168,35 @@ const addOrUpdateOrbitLine = (viewer, sat) => {
     }
   }
 
-  const existing = viewer.entities.getById('ctc-0-orbit');
+  // Determine color based on satellite name
+  let color;
+  if (sat.name == 'CTC-1A') {
+    color = Cesium.Color.CYAN.withAlpha(0.7);
+  } else if (sat.name == 'CTC-1B') {
+    color = Cesium.Color.YELLOW.withAlpha(0.7);
+  } else if (sat.name == 'CTC-1C') {
+    color = Cesium.Color.MAGENTA.withAlpha(0.7);
+  } else {
+    color = Cesium.Color.GREEN.withAlpha(0.7);
+  }
+
+  const orbitId = `ctc-1-orbit-${sat.id}`;
+  const existing = viewer.entities.getById(orbitId);
   if (existing) {
     existing.polyline = {
       positions: Cesium.Cartesian3.fromDegreesArrayHeights(positions),
       width: 2,
-      material: Cesium.Color.GREEN.withAlpha(0.7),
+      material: color,
     };
   } else {
     // Add polyline to Cesium viewer
     viewer.entities.add({
-      id: 'ctc-0-orbit',
+      id: orbitId,
       name: `${sat.name} Orbit`,
       polyline: {
         positions: Cesium.Cartesian3.fromDegreesArrayHeights(positions),
         width: 2,
-        material: Cesium.Color.GREEN.withAlpha(0.7),
+        material: color,
       },
     });
   }
@@ -197,7 +210,8 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
 
   sats.forEach((sat) => {
 
-    if (sat.name != 'CTC-0' && !showOtherSats) {
+    const isCtc1Sat = sat.name == 'CTC-1A' || sat.name == 'CTC-1B' || sat.name == 'CTC-1C';
+    if (!isCtc1Sat && !showOtherSats) {
       const entity = viewer.entities.getById(sat.id);
       if (entity) {
         entity.show = false;
@@ -237,10 +251,10 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
         entity.position = new Cesium.ConstantPositionProperty(newPosition); // Update smoothly
 
 
-        if (sat.name == 'CTC-0') {
-          // first time we fly to and track.
-          if (firstTime) {
-            // flying to CTC-0, at first geo positioning.
+        if (isCtc1Sat) {
+          // first time we fly to and track CTC-1A
+          if (firstTime && sat.name == 'CTC-1A') {
+            // flying to CTC-1A, at first geo positioning.
             viewer.scene.camera.flyTo({
               destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
             });
@@ -248,8 +262,8 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
             //viewer.selectedEntity = entity;
           }
 
-          // Check which country the satellite is over
-          if (geoJson) {
+          // Check which country the satellite is over (use CTC-1A for display)
+          if (geoJson && sat.name == 'CTC-1A') {
             setHoveredCountry('International Waters');
             const point = turf.point([longitude, latitude]);
             for (const feature of geoJson.features) {
@@ -301,9 +315,17 @@ const SatelliteCesium = () => {
     }, 500);
 
     const orbitLineUpdateIntervalId = setInterval(() => {
-      const ctc0 = sats.find(t => t.name == 'CTC-0');
-      if (ctc0) {
-        addOrUpdateOrbitLine(viewer, ctc0);
+      const ctc1A = sats.find(t => t.name == 'CTC-1A');
+      const ctc1B = sats.find(t => t.name == 'CTC-1B');
+      const ctc1C = sats.find(t => t.name == 'CTC-1C');
+      if (ctc1A) {
+        addOrUpdateOrbitLine(viewer, ctc1A);
+      }
+      if (ctc1B) {
+        addOrUpdateOrbitLine(viewer, ctc1B);
+      }
+      if (ctc1C) {
+        addOrUpdateOrbitLine(viewer, ctc1C);
       }
     }, 20000);
 
@@ -323,22 +345,28 @@ const SatelliteCesium = () => {
           return;
         }
 
-        const ctc0 = sats.find(t => t.name == 'CTC-0');
-        if (ctc0) {
-          // find a good observation..
-          const goodObservation = observations.find(t => t.status == 'good');
-          if (goodObservation) {
-            if (ctc0.tle1 != goodObservation.tle1 && ctc0.tle2 != goodObservation.tle2) {
-              ctc0.tle1 = goodObservation.tle1;
-              ctc0.tle2 = goodObservation.tle2;
-              console.log('updated TLE from latest good satnog observation');
-            } else {
-              console.log('got the same TLE from latest good satnog observation');
+        // Update TLEs for all CTC-1 satellites from observations
+        const ctc1A = sats.find(t => t.name == 'CTC-1A');
+        const ctc1B = sats.find(t => t.name == 'CTC-1B');
+        const ctc1C = sats.find(t => t.name == 'CTC-1C');
+        
+        // Find observations for each satellite by NORAD ID
+        const updateSatelliteTLE = (sat, noradId) => {
+          if (sat) {
+            const goodObservation = observations.find(t => t.status == 'good' && t.satellite_norad_cat_id == noradId);
+            if (goodObservation) {
+              if (sat.tle1 != goodObservation.tle1 && sat.tle2 != goodObservation.tle2) {
+                sat.tle1 = goodObservation.tle1;
+                sat.tle2 = goodObservation.tle2;
+                console.log(`updated TLE for ${sat.name} from latest good satnog observation`);
+              }
             }
-          } else {
-            console.warn('no good status observation in result.')
           }
-        }
+        };
+
+        updateSatelliteTLE(ctc1A, '98482');
+        updateSatelliteTLE(ctc1B, '98481');
+        updateSatelliteTLE(ctc1C, '98480');
 
         upodatedTLERef.current = true;
       }
@@ -355,7 +383,7 @@ const SatelliteCesium = () => {
     </>
     :
     <>
-      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}><img height="32" src="ctc-0.png"/> CTC-0 Tracker</h1>
+      <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}><img height="32" src="ctc-0.png"/> CTC-1 Tracker</h1>
       <p style={{ textAlign: 'center' }}>Currently over: <strong>{hoveredCountry}</strong></p>
       {/* <p style={{ textAlign: 'center'}}>Happy new year!</p> */}
     </>;
