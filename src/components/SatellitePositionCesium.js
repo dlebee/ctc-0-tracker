@@ -290,6 +290,9 @@ const SatelliteCesium = () => {
   const { data: observations, loading: observationsLoading, error: observationsError } = useCtcObservations();
   const { data: geo, loading: geoLoading, error: geoError } = useGeo();
   const [displayOtherSatellites, setDisplayOtherSatellites] = useState(false);
+  const [hoveredSatellite, setHoveredSatellite] = useState(null);
+  const [ctc1SatellitesInfo, setCtc1SatellitesInfo] = useState(null);
+  const hoveredSatelliteRef = useRef(null);
 
   const latestObservation = useMemo(() => {
     if (observations && observations.length)
@@ -304,6 +307,58 @@ const SatelliteCesium = () => {
 
   const upodatedTLERef = useRef(false);
 
+  // Calculate positions for all CTC-1 satellites
+  const calculateCtc1Positions = (viewer, sats, geoJson) => {
+    if (!viewer || !sats) return null;
+
+    const cesiumTime = viewer.clock.currentTime;
+    const dateOf = Cesium.JulianDate.toDate(cesiumTime);
+    const ctc1Sats = ['CTC-1A', 'CTC-1B', 'CTC-1C'];
+    const info = [];
+
+    ctc1Sats.forEach((satName) => {
+      const sat = sats.find(s => s.name === satName);
+      if (!sat) return;
+
+      const satrec = satellite.twoline2satrec(sat.tle1, sat.tle2);
+      const positionAndVelocity = satellite.propagate(satrec, dateOf);
+
+      if (positionAndVelocity.position) {
+        const gmst = satellite.gstime(dateOf);
+        const geodetic = satellite.eciToGeodetic(
+          positionAndVelocity.position,
+          gmst
+        );
+
+        const latitude = Cesium.Math.toDegrees(geodetic.latitude);
+        const longitude = Cesium.Math.toDegrees(geodetic.longitude);
+        const altitude = geodetic.height * 1000;
+
+        let country = 'International Waters';
+        if (geoJson) {
+          const point = turf.point([longitude, latitude]);
+          for (const feature of geoJson.features) {
+            const match = turf.booleanPointInPolygon(point, feature);
+            if (match) {
+              country = feature.properties.admin || "Unknown";
+              break;
+            }
+          }
+        }
+
+        info.push({
+          name: satName,
+          latitude: latitude.toFixed(4),
+          longitude: longitude.toFixed(4),
+          altitude: (altitude / 1000).toFixed(2),
+          country: country
+        });
+      }
+    });
+
+    return info.length > 0 ? info : null;
+  };
+
   useEffect(() => {
     if (!viewerRef.current || !sats || !geo) {
       return;
@@ -312,8 +367,20 @@ const SatelliteCesium = () => {
     const viewer = viewerRef.current;
     addSatsToCesium(viewer, sats, geo, setHoveredCountry, displayOtherSatellites);
 
+    // Calculate initial CTC-1 positions
+    const initialInfo = calculateCtc1Positions(viewer, sats, geo);
+    if (initialInfo) {
+      setCtc1SatellitesInfo(initialInfo);
+    }
+
     const intervalId = setInterval(() => {
       updateSatellitesPosition(viewer, sats, geo, setHoveredCountry, displayOtherSatellites, false);
+      
+      // Always update CTC-1 info
+      const info = calculateCtc1Positions(viewer, sats, geo);
+      if (info) {
+        setCtc1SatellitesInfo(info);
+      }
     }, 500);
 
     const orbitLineUpdateIntervalId = setInterval(() => {
@@ -342,7 +409,7 @@ const SatelliteCesium = () => {
         viewer.entities.removeAll();
       }
     };
-  }, [viewerReady, sats, displayOtherSatellites]);
+  }, [viewerReady, sats, displayOtherSatellites, geo]);
 
   useEffect(() => {
     if (observations && observations.length) {
@@ -392,7 +459,26 @@ const SatelliteCesium = () => {
     :
     <>
       <h1 style={{ textAlign: 'center', fontWeight: 'bold' }}><img height="32" src="ctc-0.png"/> CTC Tracker</h1>
-      <p style={{ textAlign: 'center' }}>Currently over: <strong>{hoveredCountry}</strong></p>
+      {ctc1SatellitesInfo && ctc1SatellitesInfo.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+          <p style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '16px' }}>CTC-1 Satellites:</p>
+          {ctc1SatellitesInfo.map((satInfo, index) => (
+            <div key={index} style={{ 
+              marginBottom: '6px', 
+              padding: '4px 8px',
+              backgroundColor: satInfo.name === 'CTC-1A' ? 'rgba(0, 255, 255, 0.2)' : 
+                              satInfo.name === 'CTC-1B' ? 'rgba(255, 255, 0, 0.2)' : 
+                              'rgba(255, 0, 255, 0.2)',
+              borderRadius: '4px',
+              display: 'inline-block',
+              marginRight: '8px'
+            }}>
+              <strong>{satInfo.name}</strong>: {satInfo.latitude}°, {satInfo.longitude}° | 
+              Alt: {satInfo.altitude} km | Over: <strong>{satInfo.country}</strong>
+            </div>
+          ))}
+        </div>
+      )}
       {/* <p style={{ textAlign: 'center'}}>Happy new year!</p> */}
     </>;
 
@@ -406,7 +492,7 @@ const SatelliteCesium = () => {
         
       </div>
 
-      <div style={{ top: 25, position: 'absolute', zIndex: 1, left: 0, right: 0, color: 'green', userSelect: 'none' }}>
+      <div style={{ top: 25, position: 'absolute', zIndex: 1000, left: 0, right: 0, color: 'green', userSelect: 'none' }}>
       {topAbsoluteContent}
       </div>
 
