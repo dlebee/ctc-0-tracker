@@ -131,10 +131,10 @@ const addSatsToCesium = (viewer, sats, geo, setHoveredCountry, showOtherSats) =>
       position: Cesium.Cartesian3.fromDegrees(0, 0, 0), // Temporary position
       point: point,
       billboard: billboard,
-      show: showOtherSats ? true : (satellite.name == 'CTC-0' || satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C')
+      show: showOtherSats ? true : (satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C')
     });
 
-    if (satellite.name == 'CTC-0' || satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C') {
+    if (satellite.name == 'CTC-1A' || satellite.name == 'CTC-1B' || satellite.name == 'CTC-1C') {
       addOrUpdateOrbitLine(viewer, satellite);
     }
   });
@@ -212,7 +212,7 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
 
   sats.forEach((sat) => {
 
-    const isCtcSat = sat.name == 'CTC-0' || sat.name == 'CTC-1A' || sat.name == 'CTC-1B' || sat.name == 'CTC-1C';
+    const isCtcSat = sat.name == 'CTC-1A' || sat.name == 'CTC-1B' || sat.name == 'CTC-1C';
     if (!isCtcSat && !showOtherSats) {
       const entity = viewer.entities.getById(sat.id);
       if (entity) {
@@ -254,8 +254,8 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
 
 
         if (isCtcSat) {
-          // first time we fly to and track CTC-0 or CTC-1A
-          if (firstTime && (sat.name == 'CTC-0' || sat.name == 'CTC-1A')) {
+          // first time we fly to and track CTC-1A
+          if (firstTime && sat.name == 'CTC-1A') {
             // flying to satellite, at first geo positioning.
             viewer.scene.camera.flyTo({
               destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, altitude + (20000 * 1000)) 
@@ -264,8 +264,8 @@ const updateSatellitesPosition = (viewer, sats, geoJson, setHoveredCountry, show
             //viewer.selectedEntity = entity;
           }
 
-          // Check which country the satellite is over (use CTC-0 or CTC-1A for display)
-          if (geoJson && (sat.name == 'CTC-0' || sat.name == 'CTC-1A')) {
+          // Check which country the satellite is over (use CTC-1A for display)
+          if (geoJson && sat.name == 'CTC-1A') {
             setHoveredCountry('International Waters');
             const point = turf.point([longitude, latitude]);
             for (const feature of geoJson.features) {
@@ -384,13 +384,9 @@ const SatelliteCesium = () => {
     }, 500);
 
     const orbitLineUpdateIntervalId = setInterval(() => {
-      const ctc0 = sats.find(t => t.name == 'CTC-0');
       const ctc1A = sats.find(t => t.name == 'CTC-1A');
       const ctc1B = sats.find(t => t.name == 'CTC-1B');
       const ctc1C = sats.find(t => t.name == 'CTC-1C');
-      if (ctc0) {
-        addOrUpdateOrbitLine(viewer, ctc0);
-      }
       if (ctc1A) {
         addOrUpdateOrbitLine(viewer, ctc1A);
       }
@@ -419,7 +415,6 @@ const SatelliteCesium = () => {
         }
 
         // Update TLEs for all CTC satellites from observations
-        const ctc0 = sats.find(t => t.name == 'CTC-0');
         const ctc1A = sats.find(t => t.name == 'CTC-1A');
         const ctc1B = sats.find(t => t.name == 'CTC-1B');
         const ctc1C = sats.find(t => t.name == 'CTC-1C');
@@ -438,7 +433,6 @@ const SatelliteCesium = () => {
           }
         };
 
-        updateSatelliteTLE(ctc0, 'VWXG-4101-0824-5480-8078');
         updateSatelliteTLE(ctc1A, 'OTUO-9494-3471-7180-4596');
         updateSatelliteTLE(ctc1B, 'CDDD-0280-4973-5946-866');
         updateSatelliteTLE(ctc1C, 'IJQV-1195-2515-8742-0084');
